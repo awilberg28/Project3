@@ -97,9 +97,7 @@ class PerceptronModel(Module):
                     if magnitude!=label.item():
                         self.weight+=label*x
                         mistakes+=1
-                        print(mistakes)
-                if mistakes==0:
-                    convergence=True
+                if mistakes==0:convergence=True
 
 
 
