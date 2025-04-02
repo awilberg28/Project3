@@ -13,7 +13,7 @@ from torch.nn import Parameter, Linear
 from torch import optim, tensor, tensordot, ones, matmul
 from torch.nn.functional import cross_entropy, relu, mse_loss, softmax
 from torch import movedim
-
+import torch as nn
 
 class PerceptronModel(Module):
     def __init__(self, dimensions):
@@ -35,16 +35,19 @@ class PerceptronModel(Module):
         
         Hint: You can use ones(dim) to create a tensor of dimension dim.
         """
+        #self.weight = nn.Parameter(1, dimensions)
         super(PerceptronModel, self).__init__()
         
         "*** YOUR CODE HERE ***"
+        weight_vector = torch.Tensor(1, dimensions).zero_()
+        self.weight = Parameter(weight_vector)
         
 
     def get_weights(self):
         """
         Return a Parameter instance with the current weights of the perceptron.
         """
-        return self.w
+        return self.weight
 
     def run(self, x):
         """
@@ -57,6 +60,7 @@ class PerceptronModel(Module):
         The pytorch function `tensordot` may be helpful here.
         """
         "*** YOUR CODE HERE ***"
+        return torch.tensordot(self.weight, x, dims=([1], [1]))
         
 
     def get_prediction(self, x):
@@ -66,6 +70,8 @@ class PerceptronModel(Module):
         Returns: 1 or -1
         """
         "*** YOUR CODE HERE ***"
+        if self.run(x)>=0:return 1
+        else: return -1
 
 
 
@@ -80,7 +86,20 @@ class PerceptronModel(Module):
         """        
         with no_grad():
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+            convergence = False
             "*** YOUR CODE HERE ***"
+            while(not convergence):
+                mistakes=0
+                for sample in dataloader:
+                    x = sample['x']
+                    label = sample['label']
+                    magnitude=self.get_prediction(x)
+                    if magnitude!=label.item():
+                        self.weight+=label*x
+                        mistakes+=1
+                        print(mistakes)
+                if mistakes==0:
+                    convergence=True
 
 
 
