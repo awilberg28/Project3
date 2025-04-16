@@ -13,7 +13,7 @@ from torch.nn import Parameter, Linear
 from torch import optim, tensor, tensordot, ones, matmul
 from torch.nn.functional import cross_entropy, relu, mse_loss, softmax
 from torch import movedim
-import torch as nn
+import torch.nn as nn
 
 class PerceptronModel(Module):
     def __init__(self, dimensions):
@@ -35,7 +35,6 @@ class PerceptronModel(Module):
         
         Hint: You can use ones(dim) to create a tensor of dimension dim.
         """
-        #self.weight = nn.Parameter(1, dimensions)
         super(PerceptronModel, self).__init__()
         
         "*** YOUR CODE HERE ***"
@@ -108,60 +107,94 @@ class RegressionModel(Module):
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
     def __init__(self):
-        # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
         super().__init__()
-
-
+        # Network architecture
+        self.batch_size = 50  # Smaller batch size for better convergence
+        
+        # Create a deeper network with more capacity
+        self.hidden1_size = 400
+        self.hidden2_size = 400
+        
+        # Layer 1
+        self.layer1Weight = nn.Parameter(torch.randn(1, self.hidden1_size) * 0.1)
+        self.layer1Bias = nn.Parameter(torch.zeros(1, self.hidden1_size))
+        
+        # Layer 2
+        self.layer2Weight = nn.Parameter(torch.randn(self.hidden1_size, self.hidden2_size) * 0.1)
+        self.layer2Bias = nn.Parameter(torch.zeros(1, self.hidden2_size))
+        
+        # Output layer
+        self.layer3Weight = nn.Parameter(torch.randn(self.hidden2_size, 1) * 0.1)
+        self.layer3Bias = nn.Parameter(torch.zeros(1, 1))
+        
+        self.learning_rate = 0.001  # Lower learning rate for better stability
 
     def forward(self, x):
-        """
-        Runs the model for a batch of examples.
-
-        Inputs:
-            x: a node with shape (batch_size x 1)
-        Returns:
-            A node with shape (batch_size x 1) containing predicted y-values
-        """
-        "*** YOUR CODE HERE ***"
-
-    
-    def get_loss(self, x, y):
-        """
-        Computes the loss for a batch of examples.
-
-        Inputs:
-            x: a node with shape (batch_size x 1)
-            y: a node with shape (batch_size x 1), containing the true y-values
-                to be used for training
-        Returns: a tensor of size 1 containing the loss
-        """
-        "*** YOUR CODE HERE ***"
- 
+        # First hidden layer
+        linear1 = torch.matmul(x, self.layer1Weight)
+        bias1 = linear1 + self.layer1Bias
+        hidden1 = relu(bias1)
         
+        # Second hidden layer
+        linear2 = torch.matmul(hidden1, self.layer2Weight)
+        bias2 = linear2 + self.layer2Bias
+        hidden2 = relu(bias2)
+        
+        # Output layer
+        linear3 = torch.matmul(hidden2, self.layer3Weight)
+        out = linear3 + self.layer3Bias
+        
+        return out
+
+    def get_loss(self, x, y):
+        pred = self.forward(x)
+        return mse_loss(pred, y)  # Use direct mse_loss function
 
     def train(self, dataset):
-        """
-        Trains the model.
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        optimizer = optim.Adam([
+            self.layer1Weight, self.layer1Bias,
+            self.layer2Weight, self.layer2Bias,
+            self.layer3Weight, self.layer3Bias
+        ], lr=self.learning_rate) 
+        max_epochs = 5000
+        current_epoch = 0
+   
+        while current_epoch < max_epochs:
+            # Track total loss for the entire epoch
+            epoch_total_loss = 0.0
+            batch_count = 0
 
-        In order to create batches, create a DataLoader object and pass in `dataset` as well as your required 
-        batch size. You can look at PerceptronModel as a guideline for how you should implement the DataLoader
+            for batch_idx, sample in enumerate(dataloader):
+                x = sample['x']
+                y = sample['label']
 
-        Each sample in the dataloader object will be in the form {'x': features, 'label': label} where label
-        is the item we need to predict based off of its features.
+                optimizer.zero_grad()
+                loss = self.get_loss(x, y)
+                loss_value = loss.item()
 
-        Inputs:
-            dataset: a PyTorch dataset object containing data to be trained on
+                # Print individual batch loss
+                #print(f"Epoch {current_epoch}, Batch {batch_idx}, Loss: {loss_value:.6f}")
+                
+                # Add to epoch total
+                epoch_total_loss += loss_value
+                batch_count += 1
+                    
+                loss.backward()
+                optimizer.step()
             
-        """
-        "*** YOUR CODE HERE ***"
-
+            # Calculate average loss for the entire epoch
+            avg_epoch_loss = epoch_total_loss / batch_count
+            #print(f"Completed epoch {current_epoch}, Average Loss: {avg_epoch_loss:.6f}")
             
-
-
-
-
-
+            # Only stop when the AVERAGE loss is below threshold
+            if epoch_total_loss < 0.02:
+                #print(f"Target average loss reached! Final average loss: {avg_epoch_loss:.6f}")
+                return
+                
+            current_epoch += 1
+        
+        #print(f"Maximum epochs ({max_epochs}) reached without achieving target loss")
 
 
 class DigitClassificationModel(Module):
