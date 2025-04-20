@@ -173,7 +173,7 @@ class RegressionModel(Module):
         opt = optim.Adam(self.parameters(), lr=1e-3)
 
 
-        for epoch in range(1000):  # You can also stop early if desired
+        for epoch in range(1000):
             total_loss = 0
             for batch in loader:
                 x = batch['x']
