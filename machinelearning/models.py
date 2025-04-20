@@ -38,13 +38,15 @@ class PerceptronModel(Module):
         super(PerceptronModel, self).__init__()
         
         "*** YOUR CODE HERE ***"
+        weightV = torch.ones(1,dimensions)
+        self.weight = Parameter(weightV)
         
 
     def get_weights(self):
         """
         Return a Parameter instance with the current weights of the perceptron.
         """
-        return self.w
+        return self.weight
 
     def run(self, x):
         """
@@ -57,6 +59,7 @@ class PerceptronModel(Module):
         The pytorch function `tensordot` may be helpful here.
         """
         "*** YOUR CODE HERE ***"
+        return torch.tensordot(self.weight,x, dims=([1], [1]))
         
 
     def get_prediction(self, x):
@@ -67,6 +70,11 @@ class PerceptronModel(Module):
         """
         "*** YOUR CODE HERE ***"
 
+        dot = self.run(x)
+        if dot >= 0:
+            return 1
+        return -1
+       
 
 
     def train(self, dataset):
@@ -81,6 +89,19 @@ class PerceptronModel(Module):
         with no_grad():
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
             "*** YOUR CODE HERE ***"
+            mistakes = None
+            while mistakes != 0:
+                mistakes = 0
+                for FeatureLabelPair in dataloader:
+                    feature = FeatureLabelPair['x']
+                    label = FeatureLabelPair['label']
+
+                    y = self.get_prediction(feature)
+                    if y != label:
+                        self.weight.data += label*feature
+                        mistakes += 1
+                            
+
 
 
 
@@ -94,6 +115,8 @@ class RegressionModel(Module):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
         super().__init__()
+
+        
 
 
 
@@ -167,6 +190,7 @@ class DigitClassificationModel(Module):
         input_size = 28 * 28
         output_size = 10
         "*** YOUR CODE HERE ***"
+
 
 
 
