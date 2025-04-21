@@ -13,6 +13,7 @@ from torch.nn import Parameter, Linear
 from torch import optim, tensor, tensordot, ones, matmul
 from torch.nn.functional import cross_entropy, relu, mse_loss, softmax
 from torch import movedim
+import torch.nn as nn
 
 
 class PerceptronModel(Module):
@@ -35,16 +36,18 @@ class PerceptronModel(Module):
         
         Hint: You can use ones(dim) to create a tensor of dimension dim.
         """
-        super(PerceptronModel, self).__init__()
-        
         "*** YOUR CODE HERE ***"
+        super(PerceptronModel, self).__init__()
+        weight_vector = torch.Tensor(1, dimensions).zero_()
+        self.weight = Parameter(weight_vector)
+        
         
 
     def get_weights(self):
         """
         Return a Parameter instance with the current weights of the perceptron.
         """
-        return self.w
+        return self.weight
 
     def run(self, x):
         """
@@ -57,6 +60,7 @@ class PerceptronModel(Module):
         The pytorch function `tensordot` may be helpful here.
         """
         "*** YOUR CODE HERE ***"
+        return tensordot(self.weight, x, dims=([1],[1]))
         
 
     def get_prediction(self, x):
@@ -66,7 +70,8 @@ class PerceptronModel(Module):
         Returns: 1 or -1
         """
         "*** YOUR CODE HERE ***"
-
+        if self.run(x) >= 0: return 1
+        else: return -1
 
 
     def train(self, dataset):
@@ -80,6 +85,18 @@ class PerceptronModel(Module):
         """        
         with no_grad():
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+            convergence = False
+            "*** YOUR CODE HERE ***"
+            while(not convergence):
+                mistakes=False
+                for sample in dataloader:
+                    val = sample['x']
+                    label = sample['label']
+                    magnitude=self.get_prediction(val)
+                    if magnitude!=label.item():
+                        self.weight+=label*val
+                        mistakes = True
+                if mistakes==False:convergence=True
             "*** YOUR CODE HERE ***"
 
 
@@ -94,6 +111,11 @@ class RegressionModel(Module):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
         super().__init__()
+        self.lr = .01 # learning rate
+        self.layer1 = Linear(1, 64)  # Input: (batch_size x 1) → (batch_size x 64)
+        self.layer2 = Linear(64, 64) # Hidden: (batch_size x 64) → (batch_size x 64)
+        self.output_layer = Linear(64, 1)  # Output: (batch_size x 1)
+        
 
 
 
@@ -107,6 +129,10 @@ class RegressionModel(Module):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
+        x = relu(self.layer1(x))       # Nonlinear activation after first layer
+        x = relu(self.layer2(x))       # Nonlinear activation after second layer
+        out = self.output_layer(x)     # No activation at output (regression task)
+        return out
 
     
     def get_loss(self, x, y):
@@ -120,6 +146,8 @@ class RegressionModel(Module):
         Returns: a tensor of size 1 containing the loss
         """
         "*** YOUR CODE HERE ***"
+        predictions = self.forward(x)
+        return mse_loss(predictions, y)
  
         
 
@@ -138,7 +166,32 @@ class RegressionModel(Module):
             
         """
         "*** YOUR CODE HERE ***"
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
+        optimizer = optim.Adam(self.parameters(), lr=0.01)
+
+        with no_grad():
+            stop = False
+
+        while not stop:
+            total_loss = 0.0
+            num_batches = 0
+            for batch in dataloader:
+                x = batch['x']
+                y = batch['label']
+
+                optimizer.zero_grad()
+                loss = self.get_loss(x, y)
+                loss.backward()
+                optimizer.step()
+
+                total_loss += loss.item()
+                num_batches += 1
+
+            avg_loss = total_loss / num_batches
+
+            if avg_loss < 0.02:
+                stop = True
             
 
 
@@ -228,10 +281,18 @@ class LanguageIDModel(Module):
         # combined alphabets of the five languages contain a total of 47 unique
         # characters.
         # You can refer to self.num_chars or len(self.languages) in your code
+        # super(LanguageIDModel, self).__init__()
+        # "*** YOUR CODE HERE ***"
+        super().__init__()
         self.num_chars = 47
         self.languages = ["English", "Spanish", "Finnish", "Dutch", "Polish"]
-        super(LanguageIDModel, self).__init__()
-        "*** YOUR CODE HERE ***"
+        self.hidden_size = 256 
+
+        # Layers
+        self.input_layer = Linear(self.num_chars, self.hidden_size)
+        self.hidden_layer = Linear(self.hidden_size, self.hidden_size)
+        self.char_layer = Linear(self.num_chars, self.hidden_size)
+        self.output_layer = Linear(self.hidden_size, len(self.languages))
 
 
     def run(self, xs):
@@ -264,6 +325,15 @@ class LanguageIDModel(Module):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        h = relu(self.input_layer(xs[0]))
+
+        # Process remaining characters
+        for x in xs[1:]:
+            h = relu(self.char_layer(x) + self.hidden_layer(h))
+
+        # After processing whole word, predict language
+        out = self.output_layer(h)
+        return out
 
     
     def get_loss(self, xs, y):
@@ -281,6 +351,9 @@ class LanguageIDModel(Module):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        predictions = self.run(xs)
+        return cross_entropy(predictions, y.argmax(dim=1))  # Need target labels as class indices
+
         
 
     def train(self, dataset):
@@ -298,6 +371,36 @@ class LanguageIDModel(Module):
         For more information, look at the pytorch documentation of torch.movedim()
         """
         "*** YOUR CODE HERE ***"
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+        optimizer = optim.Adam(self.parameters(), lr=0.0005)
+
+        converged = False
+        epochs = 0
+        max_epochs = 25  # Allow more epochs
+        while not converged and epochs < max_epochs:
+            print("epoch: ", epochs)
+            total_loss = 0
+            total_samples = 0
+            for batch in dataloader:
+                x = batch['x']  # (batch_size, length, num_chars)
+                y = batch['label']  # (batch_size, 5)
+
+                # Need to move dimensions: (length, batch_size, num_chars)
+                x = movedim(x, 1, 0)
+
+                optimizer.zero_grad()
+                loss = self.get_loss(x, y)
+                loss.backward()
+                optimizer.step()
+
+                total_loss += loss.item() * y.size(0)
+                total_samples += y.size(0)
+
+            avg_loss = total_loss / total_samples
+            epochs+=1
+            print("avg_loss", avg_loss)
+            if avg_loss < 0.12:  # achieved by fiddling with params
+                converged = True
 
         
 
