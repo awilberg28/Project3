@@ -38,11 +38,9 @@ class PerceptronModel(Module):
         Hint: You can use ones(dim) to create a tensor of dimension dim.
         """
         "*** YOUR CODE HERE ***"
-
         super(PerceptronModel, self).__init__()
         weight_vector = torch.Tensor(1, dimensions).zero_()
         self.weight = Parameter(weight_vector)
-
         
 
     def get_weights(self):
@@ -62,9 +60,7 @@ class PerceptronModel(Module):
         The pytorch function `tensordot` may be helpful here.
         """
         "*** YOUR CODE HERE ***"
-
         return tensordot(self.weight, x, dims=([1],[1]))
-
 
     def get_prediction(self, x):
         """
@@ -74,10 +70,8 @@ class PerceptronModel(Module):
         """
         "*** YOUR CODE HERE ***"
 
-
         if self.run(x) >= 0: return 1
         else: return -1
-
 
 
     def train(self, dataset):
@@ -92,7 +86,6 @@ class PerceptronModel(Module):
         with no_grad():
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
             convergence = False
-
 
             "*** YOUR CODE HERE ***"
             while(not convergence):
@@ -115,12 +108,10 @@ class RegressionModel(Module):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
         super().__init__()
-
         self.lr = .01 # learning rate
         self.layer1 = Linear(1, 64)  # Input: (batch_size x 1) → (batch_size x 64)
         self.layer2 = Linear(64, 64) # Hidden: (batch_size x 64) → (batch_size x 64)
         self.output_layer = Linear(64, 1)  # Output: (batch_size x 1)
-
         
 
 
@@ -140,10 +131,6 @@ class RegressionModel(Module):
         out = self.output_layer(x)     # No activation at output (regression task)
         return out
 
-        x = relu(self.layer1(x))
-        x = relu(self.layer2(x))
-        return self.layer3(x)
-
     
     def get_loss(self, x, y):
         """
@@ -156,10 +143,8 @@ class RegressionModel(Module):
         Returns: a tensor of size 1 containing the loss
         """
         "*** YOUR CODE HERE ***"
-
         predictions = self.forward(x)
         return mse_loss(predictions, y)
-
  
         
 
@@ -178,8 +163,8 @@ class RegressionModel(Module):
             
         """
         "*** YOUR CODE HERE ***"
-
         dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
         optimizer = optim.Adam(self.parameters(), lr=0.01)
 
         with no_grad():
@@ -227,9 +212,8 @@ class DigitClassificationModel(Module):
         input_size = 28 * 28
         output_size = 10
         "*** YOUR CODE HERE ***"
-        self.linear0 = Linear(input_size, 200)
-        self.linear1 = Linear(200, output_size)
-        
+
+
 
 
     def run(self, x):
@@ -247,7 +231,7 @@ class DigitClassificationModel(Module):
                 (also called logits)
         """
         """ YOUR CODE HERE """
-        return self.linear1(relu(self.linear0(x)))
+
  
 
     def get_loss(self, x, y):
@@ -264,9 +248,7 @@ class DigitClassificationModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
-
         return mse_loss(x, y)#cross_entropy?
-
 
 
     def train(self, dataset):
@@ -274,21 +256,9 @@ class DigitClassificationModel(Module):
         Trains the model.
         """
         """ YOUR CODE HERE """
-
         if(dataset.get_validation_accuracy()>.98):return
 
 
-
-        for epoch in range(5):
-            total_loss = 0
-            for batch in loader:
-                x = batch['x']
-                y = batch['label']
-                
-                opt.zero_grad()
-                loss = self.get_loss(x, y)
-                loss.backward()
-                opt.step()
 
 class LanguageIDModel(Module):
     """
@@ -315,7 +285,6 @@ class LanguageIDModel(Module):
         self.hidden_layer = Linear(self.hidden_size, self.hidden_size)
         self.char_layer = Linear(self.num_chars, self.hidden_size)
         self.output_layer = Linear(self.hidden_size, len(self.languages))
-
 
 
     def run(self, xs):
@@ -440,20 +409,12 @@ def Convolve(input: tensor, weight: tensor):
 
     This returns a subtensor who's first element is tensor[y,x] and has height 'height, and width 'width'
     """
-    heightIn, widthIn = input.shape
-    heightWeight, widthWeight = weight.shape
+    input_tensor_dimensions = input.shape
+    weight_dimensions = weight.shape
     Output_Tensor = tensor(())
     "*** YOUR CODE HERE ***"
-    output_height = heightIn - heightWeight + 1
-    output_width = widthIn - widthWeight + 1
-    Output_Tensor = torch.zeros(output_height, output_width)
 
-
-    for x in range(widthIn + 1 - widthWeight):
-        for y in range(heightIn + 1 - heightWeight):
-            patch = input[y: y + heightWeight, x: x + widthWeight]
-            Output_Tensor[y,x] = torch.tensordot(patch , weight, dims = 2)
-
+    
     "*** End Code ***"
     return Output_Tensor
 
@@ -479,10 +440,10 @@ class DigitConvolutionalModel(Module):
 
         self.convolution_weights = Parameter(ones((3, 3)))
         """ YOUR CODE HERE """
-        self.linear0 = Linear(676, 200)
-        self.linear1 = Linear(200, output_size)
-        
-        
+
+
+
+
     def run(self, x):
         return self(x)
  
@@ -495,7 +456,6 @@ class DigitConvolutionalModel(Module):
         x = stack(list(map(lambda sample: Convolve(sample, self.convolution_weights), x)))
         x = x.flatten(start_dim=1)
         """ YOUR CODE HERE """
-        return self.linear1(relu(self.linear0(x)))
 
 
     def get_loss(self, x, y):
@@ -512,7 +472,6 @@ class DigitConvolutionalModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
-        return cross_entropy(self.forward(x),y)
 
      
         
@@ -522,20 +481,6 @@ class DigitConvolutionalModel(Module):
         Trains the model.
         """
         """ YOUR CODE HERE """
-        loader = DataLoader(dataset, batch_size=300, shuffle=True)
-        opt = optim.Adam(self.parameters(), lr=0.004)
-
-
-        for epoch in range(5):
-            total_loss = 0
-            for batch in loader:
-                x = batch['x']
-                y = batch['label']
-                
-                opt.zero_grad()
-                loss = self.get_loss(x, y)
-                loss.backward()
-                opt.step()
 
 
 
