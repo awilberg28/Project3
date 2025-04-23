@@ -212,8 +212,9 @@ class DigitClassificationModel(Module):
         input_size = 28 * 28
         output_size = 10
         "*** YOUR CODE HERE ***"
-
-
+        self.linear0 = Linear(input_size, 200)
+        self.linear1 = Linear(200, output_size)
+        
 
 
     def run(self, x):
@@ -231,7 +232,7 @@ class DigitClassificationModel(Module):
                 (also called logits)
         """
         """ YOUR CODE HERE """
-
+        return self.linear1(relu(self.linear0(x)))
  
 
     def get_loss(self, x, y):
@@ -248,16 +249,31 @@ class DigitClassificationModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
-        return mse_loss(x, y)#cross_entropy?
+        
+        return cross_entropy(self.run(x), y)
 
+    
+        
 
     def train(self, dataset):
         """
         Trains the model.
         """
         """ YOUR CODE HERE """
-        if(dataset.get_validation_accuracy()>.98):return
+        loader = DataLoader(dataset, batch_size=300, shuffle=True)
+        opt = optim.Adam(self.parameters(), lr=0.004)
 
+
+        for epoch in range(5):
+            total_loss = 0
+            for batch in loader:
+                x = batch['x']
+                y = batch['label']
+                
+                opt.zero_grad()
+                loss = self.get_loss(x, y)
+                loss.backward()
+                opt.step()
 
 
 class LanguageIDModel(Module):
@@ -409,12 +425,20 @@ def Convolve(input: tensor, weight: tensor):
 
     This returns a subtensor who's first element is tensor[y,x] and has height 'height, and width 'width'
     """
-    input_tensor_dimensions = input.shape
-    weight_dimensions = weight.shape
+    heightIn, widthIn = input.shape
+    heightWeight, widthWeight = weight.shape
     Output_Tensor = tensor(())
     "*** YOUR CODE HERE ***"
+    output_height = heightIn - heightWeight + 1
+    output_width = widthIn - widthWeight + 1
+    Output_Tensor = torch.zeros(output_height, output_width)
 
-    
+
+    for x in range(widthIn + 1 - widthWeight):
+        for y in range(heightIn + 1 - heightWeight):
+            patch = input[y: y + heightWeight, x: x + widthWeight]
+            Output_Tensor[y,x] = torch.tensordot(patch , weight, dims = 2)
+
     "*** End Code ***"
     return Output_Tensor
 
@@ -440,10 +464,10 @@ class DigitConvolutionalModel(Module):
 
         self.convolution_weights = Parameter(ones((3, 3)))
         """ YOUR CODE HERE """
-
-
-
-
+        self.linear0 = Linear(676, 200)
+        self.linear1 = Linear(200, output_size)
+        
+        
     def run(self, x):
         return self(x)
  
@@ -456,6 +480,7 @@ class DigitConvolutionalModel(Module):
         x = stack(list(map(lambda sample: Convolve(sample, self.convolution_weights), x)))
         x = x.flatten(start_dim=1)
         """ YOUR CODE HERE """
+        return self.linear1(relu(self.linear0(x)))
 
 
     def get_loss(self, x, y):
@@ -472,6 +497,7 @@ class DigitConvolutionalModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
+        return cross_entropy(self.forward(x),y)
 
      
         
@@ -481,6 +507,20 @@ class DigitConvolutionalModel(Module):
         Trains the model.
         """
         """ YOUR CODE HERE """
+        loader = DataLoader(dataset, batch_size=300, shuffle=True)
+        opt = optim.Adam(self.parameters(), lr=0.004)
+
+
+        for epoch in range(5):
+            total_loss = 0
+            for batch in loader:
+                x = batch['x']
+                y = batch['label']
+                
+                opt.zero_grad()
+                loss = self.get_loss(x, y)
+                loss.backward()
+                opt.step()
 
 
 
