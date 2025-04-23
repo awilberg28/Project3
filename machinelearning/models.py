@@ -98,6 +98,7 @@ class PerceptronModel(Module):
                         self.weight+=label*val
                         mistakes = True
                 if mistakes==False:convergence=True
+
 class RegressionModel(Module):
     """
     A neural network model for approximating a function that maps from real
@@ -187,9 +188,8 @@ class RegressionModel(Module):
 
             avg_loss = total_loss / num_batches
 
-            if avg_loss < 0.02:
+            if avg_loss < 0.01:
                 stop = True
-            
 
 
 class DigitClassificationModel(Module):
@@ -407,7 +407,7 @@ class LanguageIDModel(Module):
             avg_loss = total_loss / total_samples
             epochs+=1
             print("avg_loss", avg_loss)
-            if avg_loss < 0.12:  # achieved by fiddling with params
+            if avg_loss < 0.08:  # achieved by fiddling with params
                 converged = True
 
         
