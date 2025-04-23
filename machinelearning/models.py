@@ -1,6 +1,7 @@
 from torch import no_grad, stack
 from torch.utils.data import DataLoader
 from torch.nn import Module
+import math
 
 
 """
@@ -97,7 +98,6 @@ class PerceptronModel(Module):
                         self.weight+=label*x
                         mistakes+=1
                 if mistakes==0:convergence=True
-
 
 
 class RegressionModel(Module):
@@ -253,15 +253,15 @@ class DigitClassificationModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
+        return mse_loss(x, y)#cross_entropy?
 
-    
-        
 
     def train(self, dataset):
         """
         Trains the model.
         """
         """ YOUR CODE HERE """
+        if(dataset.get_validation_accuracy()>.98):return
 
 
 
@@ -473,7 +473,19 @@ class Attention(Module):
         Take a look at the "dim" argument of torch.nn.functional.softmax to figure out how to do this.
         """
         B, T, C = input.size()
+        K=self.k_layer(input)
+        Q=self.q_layer(input)
+        V=self.v_layer(input)
 
         """YOUR CODE HERE"""
+        
+        Q_transposed = torch.transpose(Q, -2, -1)
+        numerator=matmul(K,Q_transposed)
+        M = numerator / math.sqrt(self.layer_size)
 
+        M = M.masked_fill(self.mask[:,:,:T,:T] == 0, float('-inf'))[0]
+
+        answer = matmul(softmax(M,dim=-1),V)
+
+        return answer
      
