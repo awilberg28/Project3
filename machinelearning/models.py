@@ -1,6 +1,7 @@
 from torch import no_grad, stack
 from torch.utils.data import DataLoader
 from torch.nn import Module
+import math
 
 
 """
@@ -41,7 +42,6 @@ class PerceptronModel(Module):
         weight_vector = torch.Tensor(1, dimensions).zero_()
         self.weight = Parameter(weight_vector)
         
-        
 
     def get_weights(self):
         """
@@ -61,7 +61,6 @@ class PerceptronModel(Module):
         """
         "*** YOUR CODE HERE ***"
         return tensordot(self.weight, x, dims=([1],[1]))
-        
 
     def get_prediction(self, x):
         """
@@ -70,6 +69,7 @@ class PerceptronModel(Module):
         Returns: 1 or -1
         """
         "*** YOUR CODE HERE ***"
+
         if self.run(x) >= 0: return 1
         else: return -1
 
@@ -86,6 +86,7 @@ class PerceptronModel(Module):
         with no_grad():
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
             convergence = False
+
             "*** YOUR CODE HERE ***"
             while(not convergence):
                 mistakes=False
@@ -97,10 +98,6 @@ class PerceptronModel(Module):
                         self.weight+=label*val
                         mistakes = True
                 if mistakes==False:convergence=True
-            "*** YOUR CODE HERE ***"
-
-
-
 class RegressionModel(Module):
     """
     A neural network model for approximating a function that maps from real
@@ -195,11 +192,6 @@ class RegressionModel(Module):
             
 
 
-
-
-
-
-
 class DigitClassificationModel(Module):
     """
     A model for handwritten digit classification using the MNIST dataset.
@@ -256,15 +248,15 @@ class DigitClassificationModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
+        return mse_loss(x, y)#cross_entropy?
 
-    
-        
 
     def train(self, dataset):
         """
         Trains the model.
         """
         """ YOUR CODE HERE """
+        if(dataset.get_validation_accuracy()>.98):return
 
 
 
@@ -526,7 +518,19 @@ class Attention(Module):
         Take a look at the "dim" argument of torch.nn.functional.softmax to figure out how to do this.
         """
         B, T, C = input.size()
+        K=self.k_layer(input)
+        Q=self.q_layer(input)
+        V=self.v_layer(input)
 
         """YOUR CODE HERE"""
+        
+        Q_transposed = torch.transpose(Q, -2, -1)
+        numerator=matmul(K,Q_transposed)
+        M = numerator / math.sqrt(self.layer_size)
 
+        M = M.masked_fill(self.mask[:,:,:T,:T] == 0, float('-inf'))[0]
+
+        answer = matmul(softmax(M,dim=-1),V)
+
+        return answer
      
