@@ -603,7 +603,7 @@ def check_attention(tracker):
     
     for block_size in [2,4,16]:
         layer_size = np.random.randint(2,10)
-
+        
         att_block = models.Attention(layer_size, block_size)
         batch_size = np.random.randint(1,10)
 
@@ -629,7 +629,6 @@ def check_attention(tracker):
         expected_output = expected_output.masked_fill(att_block.mask[:,:,:T,:T] == 0, float('-inf'))[0]
         
         output = torch.matmul(nn.functional.softmax(expected_output, dim=-1),att_block.v_layer(input))
-
 
         assert torch.all(torch.isclose(output, att_block(input))), "The output returned by Attention() does not match expected output"
     tracker.add_points(1)
