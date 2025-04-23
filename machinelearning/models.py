@@ -264,18 +264,17 @@ class DigitClassificationModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
+        
+        return cross_entropy(self.run(x), y)
 
-        return mse_loss(x, y)#cross_entropy?
-
-
+    
+        
 
     def train(self, dataset):
         """
         Trains the model.
         """
         """ YOUR CODE HERE """
-
-        if(dataset.get_validation_accuracy()>.98):return
         loader = DataLoader(dataset, batch_size=300, shuffle=True)
         opt = optim.Adam(self.parameters(), lr=0.004)
 
