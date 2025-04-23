@@ -188,7 +188,7 @@ class RegressionModel(Module):
                 total_loss += loss.item()
 
             avg_loss = total_loss / len(loader)
-            if avg_loss < 0.02:
+            if avg_loss < 0.002:
                 break
 
             
