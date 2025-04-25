@@ -15,7 +15,7 @@ from torch.nn.functional import cross_entropy, relu, mse_loss, softmax
 from torch import movedim
 
 
-class PerceptronModel(Module):
+class PerceptronModel(Module):  # Q1
     def __init__(self, dimensions):
         """
         Initialize a new Perceptron instance.
@@ -38,6 +38,11 @@ class PerceptronModel(Module):
         super(PerceptronModel, self).__init__()
         
         "*** YOUR CODE HERE ***"
+        super(PerceptronModel, self).__init__()
+        weight_vector = torch.Tensor(1, dimensions).zero_()
+        self.weight = Parameter(weight_vector)
+
+        
         
 
     def get_weights(self):
@@ -57,6 +62,7 @@ class PerceptronModel(Module):
         The pytorch function `tensordot` may be helpful here.
         """
         "*** YOUR CODE HERE ***"
+        return tensordot(self.weight, x, dims=([1],[1]))
         
 
     def get_prediction(self, x):
@@ -66,6 +72,8 @@ class PerceptronModel(Module):
         Returns: 1 or -1
         """
         "*** YOUR CODE HERE ***"
+        if self.run(x) >= 0: return 1
+        else: return -1
 
 
 
@@ -81,10 +89,21 @@ class PerceptronModel(Module):
         with no_grad():
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
             "*** YOUR CODE HERE ***"
+            convergence = False
+            while(not convergence):
+                mistakes=False
+                for sample in dataloader:
+                    val = sample['x']
+                    label = sample['label']
+                    magnitude=self.get_prediction(val)
+                    if magnitude!=label.item():
+                        self.weight+=label*val
+                        mistakes = True
+                if mistakes==False:convergence=True
 
 
 
-class RegressionModel(Module):
+class RegressionModel(Module):  # Q2
     """
     A neural network model for approximating a function that maps from real
     numbers to real numbers. The network should be sufficiently large to be able
@@ -93,6 +112,29 @@ class RegressionModel(Module):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+
+
+        # Network architecture
+        self.batch_size = 50  # Smaller batch size for better convergence
+        
+        # Create a deeper network with more capacity
+        self.hidden1_size = 400
+        self.hidden2_size = 400
+        
+        # Layer 1
+        self.layer1Weight = torch.nn.Parameter(torch.randn(1, self.hidden1_size) * 0.1)
+        self.layer1Bias = torch.nn.Parameter(torch.zeros(1, self.hidden1_size))
+        
+        # Layer 2
+        self.layer2Weight = torch.nn.Parameter(torch.randn(self.hidden1_size, self.hidden2_size) * 0.1)
+        self.layer2Bias = torch.nn.Parameter(torch.zeros(1, self.hidden2_size))
+        
+        # Output layer
+        self.layer3Weight = torch.nn.Parameter(torch.randn(self.hidden2_size, 1) * 0.1)
+        self.layer3Bias = torch.nn.Parameter(torch.zeros(1, 1))
+        
+        self.learning_rate = 0.001  # Lower learning rate for better stability
+
         super().__init__()
 
 
@@ -108,6 +150,24 @@ class RegressionModel(Module):
         """
         "*** YOUR CODE HERE ***"
 
+
+        # First hidden layer
+        linear1 = torch.matmul(x, self.layer1Weight)
+        bias1 = linear1 + self.layer1Bias
+        hidden1 = relu(bias1)
+        
+        # Second hidden layer
+        linear2 = torch.matmul(hidden1, self.layer2Weight)
+        bias2 = linear2 + self.layer2Bias
+        hidden2 = relu(bias2)
+        
+        # Output layer
+        linear3 = torch.matmul(hidden2, self.layer3Weight)
+        out = linear3 + self.layer3Bias
+        
+        return out
+
+
     
     def get_loss(self, x, y):
         """
@@ -120,6 +180,11 @@ class RegressionModel(Module):
         Returns: a tensor of size 1 containing the loss
         """
         "*** YOUR CODE HERE ***"
+
+
+        pred = self.forward(x)
+        return mse_loss(pred, y)  # Use direct mse_loss function
+
  
         
 
@@ -139,6 +204,51 @@ class RegressionModel(Module):
         """
         "*** YOUR CODE HERE ***"
 
+
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        optimizer = optim.Adam([
+            self.layer1Weight, self.layer1Bias,
+            self.layer2Weight, self.layer2Bias,
+            self.layer3Weight, self.layer3Bias
+        ], lr=self.learning_rate) 
+        max_epochs = 5000
+        current_epoch = 0
+   
+        while current_epoch < max_epochs:
+            # Track total loss for the entire epoch
+            epoch_total_loss = 0.0
+            batch_count = 0
+
+            for batch_idx, sample in enumerate(dataloader):
+                x = sample['x']
+                y = sample['label']
+
+                optimizer.zero_grad()
+                loss = self.get_loss(x, y)
+                loss_value = loss.item()
+
+                # Print individual batch loss
+                #print(f"Epoch {current_epoch}, Batch {batch_idx}, Loss: {loss_value:.6f}")
+                
+                # Add to epoch total
+                epoch_total_loss += loss_value
+                batch_count += 1
+                    
+                loss.backward()
+                optimizer.step()
+            
+            # Calculate average loss for the entire epoch
+            avg_epoch_loss = epoch_total_loss / batch_count
+            #print(f"Completed epoch {current_epoch}, Average Loss: {avg_epoch_loss:.6f}")
+            
+            # Only stop when the AVERAGE loss is below threshold
+            if epoch_total_loss < 0.02:
+                #print(f"Target average loss reached! Final average loss: {avg_epoch_loss:.6f}")
+                return
+                
+            current_epoch += 1
+
+
             
 
 
@@ -147,7 +257,7 @@ class RegressionModel(Module):
 
 
 
-class DigitClassificationModel(Module):
+class DigitClassificationModel(Module):  # Q3
     """
     A model for handwritten digit classification using the MNIST dataset.
 
@@ -167,6 +277,13 @@ class DigitClassificationModel(Module):
         input_size = 28 * 28
         output_size = 10
         "*** YOUR CODE HERE ***"
+        hidden_size = 128
+
+        self.linear1 = torch.nn.Linear(input_size, hidden_size)
+        self.relu = torch.nn.ReLU()
+        self.linear2 = torch.nn.Linear(hidden_size, output_size)
+
+        self.loss_fn = torch.nn.CrossEntropyLoss()
 
 
 
@@ -186,6 +303,10 @@ class DigitClassificationModel(Module):
                 (also called logits)
         """
         """ YOUR CODE HERE """
+        h = self.linear1(x)
+        h_relu = self.relu(h)
+        logits = self.linear2(h_relu)
+        return logits
 
  
 
@@ -203,6 +324,8 @@ class DigitClassificationModel(Module):
         Returns: a loss tensor
         """
         """ YOUR CODE HERE """
+        logits = self.run(x)
+        return self.loss_fn(logits, y)
 
     
         
@@ -212,10 +335,30 @@ class DigitClassificationModel(Module):
         Trains the model.
         """
         """ YOUR CODE HERE """
+        optimizer = torch.optim.SGD(self.parameters(), lr=0.1)
+        batch_size = 100
+        epochs = 10
+
+        x_train = dataset.x
+        y_train = dataset.y
+        num_examples = x_train.shape[0]
+
+        for epoch in range(epochs):
+            for i in range(0, num_examples, batch_size):
+                x_batch = x_train[i:i + batch_size]
+                y_batch = y_train[i:i + batch_size]
+
+                x_batch = torch.tensor(x_batch, dtype=torch.float32)
+                y_batch = torch.tensor(y_batch, dtype=torch.float32)
+
+                optimizer.zero_grad()
+                loss = self.get_loss(x_batch, y_batch)
+                loss.backward()
+                optimizer.step()
 
 
 
-class LanguageIDModel(Module):
+class LanguageIDModel(Module):  # Q4
     """
     A model for language identification at a single-word granularity.
 
@@ -301,7 +444,7 @@ class LanguageIDModel(Module):
 
         
 
-def Convolve(input: tensor, weight: tensor):
+def Convolve(input: tensor, weight: tensor):  # Q5, part 1
     """
     Acts as a convolution layer by applying a 2d convolution with the given inputs and weights.
     DO NOT import any pytorch methods to directly do this, the convolution must be done with only the functions
@@ -325,7 +468,7 @@ def Convolve(input: tensor, weight: tensor):
 
 
 
-class DigitConvolutionalModel(Module):
+class DigitConvolutionalModel(Module):  # Q5, part 2
     """
     A model for handwritten digit classification using the MNIST dataset.
 
@@ -389,7 +532,7 @@ class DigitConvolutionalModel(Module):
 
 
 
-class Attention(Module):
+class Attention(Module):  # Q6
     def __init__(self, layer_size, block_size):
         super().__init__()
         """
